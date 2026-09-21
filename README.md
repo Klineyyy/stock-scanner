@@ -24,7 +24,7 @@ The demo catalogue is the same 12 items, barcodes and quantities in all three, s
 - **Low-stock tab** with pull-to-refresh, worst first.
 - **History** of what this device scanned and changed.
 - **The camera only runs while the Scan tab is showing**, and says so clearly when access is blocked or there's no camera.
-- **Installable and offline-ready**: a web manifest and a service worker, so it can be added to the home screen.
+- **A PWA: installable and offline-ready.** It has a web manifest (standalone, with maskable icons) and a service worker, so it can be added to the home screen and opens without a network. Offline, the app itself always loads, and the **Demo backend works fully** (scan by typing, add and remove stock). Supabase and ERPNext need a connection to read or change stock; there is no offline queue for changes yet, and the app tells you when it can't reach the server.
 - **Switch backends in Settings**, with a "Test connection" button that explains what's wrong (bad key, unreachable server, wrong address).
 
 ## Run it
@@ -68,6 +68,16 @@ Browsers can only *read* the tables. Every change goes through a function (`inv_
 2. In the app, open **Settings**, choose **ERPNext**, and enter the server address (for the demo, `http://localhost:8080`), the API key and the secret. Press **Test connection**.
 
 The server must allow requests from wherever this app is served (CORS). The Inventory Hub demo allows any origin; set `ALLOW_CORS` to your app's address for anything real. A page served over HTTPS can't call a plain-`http` server, so use HTTPS for a real ERPNext.
+
+### Try the PWA parts locally
+
+The service worker only runs in a production build (not in `npm run dev`):
+
+```bash
+npm run build && npm run preview     # http://localhost:4173
+```
+
+Open it in Chrome: an install icon appears in the address bar. In DevTools > Application you can see the manifest and the service worker, and tick **Offline** in the Network tab to reload with no connection. On a phone it needs HTTPS (see Deploy): in Chrome use the menu > *Install app*, on iPhone use Share > *Add to Home Screen*. `npm run e2e:pwa` checks all of this automatically.
 
 ## Deploy
 

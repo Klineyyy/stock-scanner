@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc",
     "test": "vitest run",
-    "e2e": "node e2e/demo.mjs"
+    "e2e": "node e2e/demo.mjs",
+    "e2e:pwa": "node e2e/pwa.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
