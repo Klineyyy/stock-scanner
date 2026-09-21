@@ -96,6 +96,8 @@ npm run e2e                           # terminal 2
 
 It checks 19 things, among them: the camera reads a barcode and shows the item; removing more than is on hand is refused; the camera switches off when you leave the Scan tab and back on when you return; a hardware scanner (typing + Enter) works; changes survive a reload; with no camera the app says so and manual entry still works. The SQL in `supabase/schema.sql` was tested separately against PostgreSQL, including ten parallel removals of a three-unit item (exactly three succeed).
 
+The Supabase backend was verified against a real Supabase project: the same fake-camera scan, a stock change, a refusal, and a second browser with its own storage seeing the first one's change (the data is shared online). The database checks were run live as well: direct writes with the browser key are refused by row level security, `inv_seed()` can't be called from the browser, and ten parallel removals of a three-unit item let exactly three through.
+
 The ERPNext backend was verified the same way against a live Inventory Hub: scanning through the fake camera, removing stock, watching ERPNext's low-stock alert appear, and restocking to resolve it.
 
 ## How it's built
