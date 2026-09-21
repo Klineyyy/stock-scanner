@@ -38,7 +38,7 @@ Open <http://localhost:5173>. With no configuration it runs on the **Demo** back
 
 ### Try a barcode
 
-Print or show one of these, or just type it in the box:
+A printable sheet with all 12 barcodes is in [`docs/demo-barcodes.png`](docs/demo-barcodes.png) (print it, or show it on a phone screen at full brightness). Or type one in the box:
 
 | Item | Barcode |
 | --- | --- |
