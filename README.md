@@ -2,6 +2,8 @@
 
 An installable **Ionic + React** app (a PWA) for the stockroom: point the phone camera at a barcode, see how much is on hand in each warehouse, and add or remove units. It also lists what's running low.
 
+**Live demo: <https://stock-scanner-h5m9.vercel.app>** (open it on a phone, allow the camera, and scan a barcode from [the printable sheet](docs/demo-barcodes.png)).
+
 It works with three interchangeable backends, so the same app can run as an online demo or against a real ERP:
 
 | Backend | What it is | When to use it |
