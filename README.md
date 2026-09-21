@@ -62,6 +62,8 @@ Anything else shows "No match".
 
 Browsers can only *read* the tables. Every change goes through a function (`inv_adjust_stock`) that locks the row while it changes, so two people scanning at once can't both take the last unit. Settings has a **Reset demo data** button (it is a public demo, so anyone can press it).
 
+To take Stock Scanner out of a project again, run [`supabase/uninstall.sql`](supabase/uninstall.sql): it drops only the `inv_*` tables and functions and leaves any other app in the project alone.
+
 ## Use ERPNext
 
 1. Run the [Inventory Hub](https://github.com/Klineyyy/inventory-hub) app on your ERPNext server. Its Docker demo does it in one command (`docker compose up --build`) and creates a `scanner@inventory.local` user with the API key `demo-scanner-key` and secret `demo-scanner-secret`.
