@@ -3,7 +3,7 @@
 Each video is a short MJPEG clip of one EAN-13 barcode held in front of a beige background, like
 someone holding a product up to the camera.
 
-    pip install python-barcode pillow
+    pip install python-barcode pillow qrcode
     python3 e2e/make-camera-videos.py
 """
 
@@ -54,6 +54,29 @@ def make_video(name: str, digits: str) -> None:
     print("wrote", OUT / f"{name}.mjpeg")
 
 
+def make_qr_video(name: str, text: str) -> None:
+    """A QR code holding an item code, for the "Also read QR codes" test."""
+    import qrcode
+
+    width, height = 640, 480
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=9, border=4)
+    qr.add_data(text)
+    qr.make(fit=True)
+    code = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+
+    random.seed(2)
+    with open(OUT / f"{name}.mjpeg", "wb") as out:
+        for _ in range(20):
+            frame = Image.new("RGB", (width, height), (176, 168, 152))
+            jitter = (random.randint(-3, 3), random.randint(-3, 3))
+            frame.paste(code, ((width - code.width) // 2 + jitter[0], (height - code.height) // 2 + jitter[1]))
+            jpeg = io.BytesIO()
+            frame.filter(ImageFilter.GaussianBlur(0.4)).save(jpeg, "JPEG", quality=90)
+            out.write(jpeg.getvalue())
+    print("wrote", OUT / f"{name}.mjpeg")
+
+
 if __name__ == "__main__":
     for video, digits in VIDEOS.items():
         make_video(video, digits)
+    make_qr_video("qr", "BOND-A4")  # a QR code holding the item code

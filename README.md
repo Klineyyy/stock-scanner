@@ -20,7 +20,7 @@ The demo catalogue is the same 12 items, barcodes and quantities in all three, s
 
 ## Features
 
-- **Camera scanning** with [ZXing](https://github.com/zxing-js/library), so it works in any browser (it doesn't depend on the `BarcodeDetector` API, which iPhone Safari lacks). Reads EAN-13, EAN-8, UPC-A, UPC-E, Code 128 and Code 39. Beeps and buzzes on a read.
+- **Camera scanning** with [ZXing](https://github.com/zxing-js/library), so it works in any browser (it doesn't depend on the `BarcodeDetector` API, which iPhone Safari lacks). Reads EAN-13, EAN-8, UPC-A, UPC-E, Code 128 and Code 39, and **QR codes too if you turn them on** in Settings ("Also read QR codes"; off by default). Beeps and buzzes on a read.
 - **Hardware scanners work too.** A USB or Bluetooth scanner types digits and presses Enter, so the type-a-barcode box handles it.
 - **Add or remove stock** per warehouse with a stepper. The app refuses to remove more than is on hand.
 - **Low-stock tab** with pull-to-refresh, worst first.
@@ -49,6 +49,8 @@ A printable sheet with all 12 barcodes is in [`docs/demo-barcodes.png`](docs/dem
 | Alcohol 70% 500ml | `4800010000122` (3 left, low) |
 
 Anything else shows "No match".
+
+**QR codes:** turn on *Settings > Also read QR codes*, then scan the codes on [`docs/demo-qr.png`](docs/demo-qr.png). A QR code should hold a barcode number or an item code (these hold the item code, like `BOND-A4`); a QR with anything else in it, like a web address, shows "No match".
 
 ## Use Supabase (shared online demo)
 
@@ -90,7 +92,7 @@ It's a static site, so it deploys anywhere. On [Vercel](https://vercel.com): imp
 ## Tests
 
 ```bash
-npm test          # 27 unit tests
+npm test          # 30 unit tests
 npm run typecheck
 ```
 
@@ -101,14 +103,14 @@ The unit tests cover the three backends (with a fake `fetch` and a fake Supabase
 `npm run e2e` drives the built app in a real browser. Chromium is started with a **fake camera** that plays a video of a barcode, so the whole flow runs for real: camera, decoding, lookup, stock change, alerts, history, PWA.
 
 ```bash
-pip install python-barcode pillow     # for the fake camera videos
+pip install python-barcode pillow qrcode   # for the fake camera videos
 python3 e2e/make-camera-videos.py     # once
 npx playwright install chromium       # once
 npm run build && npm run preview      # terminal 1
 npm run e2e                           # terminal 2
 ```
 
-It checks 19 things, among them: the camera reads a barcode and shows the item; removing more than is on hand is refused; the camera switches off when you leave the Scan tab and back on when you return; a hardware scanner (typing + Enter) works; changes survive a reload; with no camera the app says so and manual entry still works. The SQL in `supabase/schema.sql` was tested separately against PostgreSQL, including ten parallel removals of a three-unit item (exactly three succeed).
+It checks 23 things, among them: the camera reads a barcode and shows the item; removing more than is on hand is refused; the camera switches off when you leave the Scan tab and back on when you return; a hardware scanner (typing + Enter) works; QR codes are ignored until switched on, then read, without breaking ordinary barcodes; changes survive a reload; with no camera the app says so and manual entry still works. The SQL in `supabase/schema.sql` was tested separately against PostgreSQL, including ten parallel removals of a three-unit item (exactly three succeed).
 
 The Supabase backend was verified against a real Supabase project: the same fake-camera scan, a stock change, a refusal, and a second browser with its own storage seeing the first one's change (the data is shared online). The database checks were run live as well: direct writes with the browser key are refused by row level security, `inv_seed()` can't be called from the browser, and ten parallel removals of a three-unit item let exactly three through.
 
@@ -132,12 +134,13 @@ e2e/                    fake-camera end-to-end test
 Two things worth knowing, both found by the end-to-end test:
 
 - **Tabs decide for themselves whether they're visible.** Ionic keeps every tab mounted, and its `useIonViewWillEnter`-style hooks don't fire on tab switches with React Router 6, so `useIsActive` reads the router location instead. That is what turns the camera off and refreshes the Low stock tab.
+- **ZXing's QR reader logs a warning for every frame without a QR code** (its exception classes fail `instanceof` when compiled to ES5), which buries the console at several frames a second. `zxingQuiet.ts` drops that one message and lets every other warning through; the end-to-end test fails if it ever leaks again.
 - **The toast is a plain element**, not Ionic's `IonToast`: replacing an open `IonToast` with a new one crashed the whole React tree (a blank screen), and Ionic's `useIonToast` hook ignores a new toast while one is showing, which hid errors that arrive right after a success. An error boundary now catches anything else and offers a reload.
 
 ## Limits
 
 - Tested in Chromium (desktop and a phone-sized window). ZXing runs in any browser, but I haven't tried iOS Safari or a physical phone camera; real cameras also need decent light and a steady hand.
-- No QR codes: it reads product barcodes.
+- QR codes are opt-in and only useful if they hold a barcode number or an item code. The QR reader is slower per frame, which is why it is off by default.
 - The Supabase demo is public: anyone can change or reset the stock.
 - The JavaScript bundle is large (about 425 kB gzipped, mostly Ionic and ZXing); the service worker caches it after the first load.
 - `npm audit` reports two moderate advisories in `react-router` 6 (an open redirect through user-supplied links, and SSR hydration). Neither applies here: the app has no server rendering and never navigates to a user-supplied address. The fix needs `react-router` 8, which Ionic's router doesn't support yet.

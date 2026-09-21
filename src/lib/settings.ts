@@ -6,11 +6,13 @@ import type { BackendId } from "./types";
 
 export interface Settings {
   backend: BackendId;
+  /** Also read QR codes with the camera (product barcodes are always read). */
+  qr: boolean;
   erp: { url: string; key: string; secret: string };
 }
 
 const KEY = "stockscan:settings";
-const DEFAULTS: Settings = { backend: defaultBackend, erp: { url: "", key: "", secret: "" } };
+const DEFAULTS: Settings = { backend: defaultBackend, qr: false, erp: { url: "", key: "", secret: "" } };
 
 const listeners = new Set<() => void>();
 let cachedRaw: string | null | undefined;
@@ -30,7 +32,7 @@ function parse(raw: string | null): Settings {
     const value = JSON.parse(raw) as Partial<Settings>;
     // A saved "supabase" choice is meaningless in a build that has no Supabase credentials.
     const backend = value.backend === "supabase" && !supabaseAvailable ? defaultBackend : value.backend;
-    return { backend: backend ?? DEFAULTS.backend, erp: { ...DEFAULTS.erp, ...value.erp } };
+    return { backend: backend ?? DEFAULTS.backend, qr: value.qr === true, erp: { ...DEFAULTS.erp, ...value.erp } };
   } catch {
     return DEFAULTS;
   }

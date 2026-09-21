@@ -7,11 +7,13 @@ import Scanner from "../components/Scanner";
 import { addHistory } from "../lib/history";
 import { beep } from "../lib/sound";
 import { NotFoundError, type ItemInfo } from "../lib/types";
+import { useSettings } from "../lib/settings";
 import { useBackend } from "../lib/useBackend";
 import { useIsActive } from "../lib/useIsActive";
 
 export default function ScanPage() {
   const backend = useBackend();
+  const { qr } = useSettings();
   const [item, setItem] = useState<ItemInfo | null>(null);
   const [missing, setMissing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export default function ScanPage() {
 
   return (
     <Page title="Scan">
-      <Scanner active={cameraOn} onDetected={lookup} />
+      <Scanner active={cameraOn} readQr={qr} onDetected={lookup} />
 
       <div className="manual">
         <IonInput

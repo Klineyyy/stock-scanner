@@ -19,15 +19,17 @@ const BASE = process.env.BASE ?? "http://127.0.0.1:4173";
 const step = (m) => console.log("ok -", m);
 const errors = [];
 
-async function session(video, fn, { camera = true, viewport = { width: 390, height: 844 } } = {}) {
+async function session(video, fn, { camera = true, qr = false, viewport = { width: 390, height: 844 } } = {}) {
   const args = camera
     ? ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--use-file-for-fake-video-capture=${HERE}/.cam/${video}.mjpeg`]
     : [];
   const browser = await chromium.launch({ args });
   const ctx = await browser.newContext({ viewport, hasTouch: true, permissions: camera ? ["camera"] : [] });
+  if (qr) await ctx.addInitScript(() => localStorage.setItem("stockscan:settings", JSON.stringify({ backend: "mock", qr: true })));
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${video}: ${e}`));
   page.on("console", (m) => m.type() === "error" && !/favicon|Failed to load resource/.test(m.text()) && errors.push(`${video}: ${m.text()}`));
+  page.on("console", (m) => m.type() === "warning" && /MultiFormatReader/.test(m.text()) && errors.push(`${video}: ZXing warning leaked: ${m.text().slice(0, 80)}`));
   try {
     await fn(page, ctx);
   } finally {
@@ -197,6 +199,42 @@ await session(
     await page.screenshot({ path: `${OUT}/no-camera.png` });
   },
   { camera: false },
+);
+
+// ---------- E. QR codes are opt-in ----------
+await session("qr", async (page) => {
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelector('[data-testid="scanner-status"]')?.dataset.status === "scanning", null, { timeout: 15000 });
+  await page.waitForTimeout(5000);
+  assert.equal(await tid(page, "item-name").count(), 0, "a QR code must be ignored while the setting is off");
+  assert.doesNotMatch(await tid(page, "scanner-status").innerText(), /QR/);
+  step("QR off (the default): a QR code held up to the camera is ignored");
+
+  await tid(page, "tab-settings").click();
+  await tid(page, "qr-toggle").click();
+  await tid(page, "tab-scan").click();
+  await tid(page, "item-name").waitFor({ timeout: 25000 });
+  assert.equal(await tid(page, "item-name").innerText(), "Bond Paper A4 (ream)");
+  assert.match(await tid(page, "scanner-status").innerText(), /QR code/);
+  step("Settings > Also read QR codes on: the same QR code (holding BOND-A4) now finds Bond Paper A4 (ream)");
+
+  await page.reload({ waitUntil: "networkidle" });
+  await tid(page, "tab-settings").click();
+  assert.equal(await page.locator('ion-toggle[data-testid="qr-toggle"]').evaluate((el) => el.checked), true);
+  step("the QR setting is remembered after a reload");
+});
+
+// ---------- F. with QR on, ordinary product barcodes still work ----------
+await session(
+  "bond",
+  async (page) => {
+    await page.goto(BASE, { waitUntil: "networkidle" });
+    await tid(page, "item-name").waitFor({ timeout: 25000 });
+    assert.equal(await tid(page, "item-name").innerText(), "Bond Paper A4 (ream)");
+    assert.match(await tid(page, "scanner-status").innerText(), /QR code/);
+    step("with QR on, an ordinary EAN-13 barcode is still read (Bond Paper A4 (ream))");
+  },
+  { qr: true },
 );
 
 console.log("page errors:", errors.length ? errors : "none");

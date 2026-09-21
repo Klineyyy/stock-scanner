@@ -1,4 +1,4 @@
-import { IonButton, IonInput, IonItem, IonList, IonRadio, IonRadioGroup } from "@ionic/react";
+import { IonButton, IonInput, IonItem, IonList, IonRadio, IonRadioGroup, IonToggle } from "@ionic/react";
 import { useState } from "react";
 import Page from "../components/Page";
 import { createBackend, supabaseAvailable } from "../lib/backends";
@@ -105,6 +105,23 @@ export default function SettingsPage() {
           </IonItem>
         </IonList>
       )}
+
+      <h3 className="section-title">Scanning</h3>
+      <IonList inset lines="full">
+        <IonItem>
+          <IonToggle
+            checked={settings.qr}
+            justify="space-between"
+            data-testid="qr-toggle"
+            onIonChange={(e) => saveSettings({ ...settings, qr: e.detail.checked })}
+          >
+            <div className="radio-label">
+              <strong>Also read QR codes</strong>
+              <small>Barcodes are always read. A QR code should hold a barcode number or an item code, like BOND-A4.</small>
+            </div>
+          </IonToggle>
+        </IonItem>
+      </IonList>
 
       <div className="settings-actions">
         <IonButton expand="block" onClick={testConnection} disabled={testing} data-testid="test-connection">

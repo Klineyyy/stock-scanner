@@ -1,8 +1,10 @@
 import { IonButton, IonIcon } from "@ionic/react";
 import { BrowserMultiFormatReader, type IScannerControls } from "@zxing/browser";
-import { BarcodeFormat, DecodeHintType } from "@zxing/library";
+import { DecodeHintType } from "@zxing/library";
 import { cameraOutline } from "ionicons/icons";
 import { useEffect, useRef, useState } from "react";
+import { scanFormats } from "../lib/formats";
+import "../lib/zxingQuiet";
 
 // A live camera preview that reads barcodes with ZXing (pure JavaScript, so it works in any
 // browser, including iPhone Safari, where the native BarcodeDetector API doesn't exist).
@@ -17,26 +19,11 @@ const MESSAGES: Record<Exclude<Status, "scanning">, string> = {
   error: "The camera couldn't be started.",
 };
 
-// The formats products carry. Restricting them makes decoding faster and avoids false reads
-// (QR codes are left out on purpose: this app reads product barcodes).
-const HINTS = new Map<DecodeHintType, unknown>([
-  [
-    DecodeHintType.POSSIBLE_FORMATS,
-    [
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.UPC_A,
-      BarcodeFormat.UPC_E,
-      BarcodeFormat.CODE_128,
-      BarcodeFormat.CODE_39,
-    ],
-  ],
-  [DecodeHintType.TRY_HARDER, true],
-]);
-
 const SAME_CODE_COOLDOWN_MS = 2500;
 
 interface Props {
+  /** Also look for QR codes (they hold a barcode number or an item code). */
+  readQr?: boolean;
   /** Only runs the camera while true, so it is off when the tab isn't on screen. */
   active: boolean;
   onDetected: (code: string) => void;
@@ -49,7 +36,7 @@ function classify(error: unknown): Status {
   return "error";
 }
 
-export default function Scanner({ active, onDetected }: Props) {
+export default function Scanner({ active, readQr = false, onDetected }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [status, setStatus] = useState<Status>("starting");
   const [attempt, setAttempt] = useState(0);
@@ -72,7 +59,11 @@ export default function Scanner({ active, onDetected }: Props) {
     let last = { code: "", at: 0 };
     setStatus("starting");
 
-    const reader = new BrowserMultiFormatReader(HINTS, { delayBetweenScanAttempts: 120 });
+    const hints = new Map<DecodeHintType, unknown>([
+      [DecodeHintType.POSSIBLE_FORMATS, scanFormats(readQr)],
+      [DecodeHintType.TRY_HARDER, true],
+    ]);
+    const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 120 });
     reader
       .decodeFromConstraints({ video: { facingMode: { ideal: "environment" } } }, videoRef.current!, (result) => {
         if (!result) return; // called on every frame that has no barcode in it
@@ -97,7 +88,7 @@ export default function Scanner({ active, onDetected }: Props) {
       cancelled = true;
       controls?.stop();
     };
-  }, [active, attempt]);
+  }, [active, attempt, readQr]);
 
   return (
     <div className="scanner">
@@ -119,7 +110,7 @@ export default function Scanner({ active, onDetected }: Props) {
         )}
       </div>
       <p className="scanner-status" data-testid="scanner-status" data-status={status} aria-live="polite">
-        {status === "scanning" ? "Point the camera at a barcode" : MESSAGES[status]}
+        {status === "scanning" ? `Point the camera at a barcode${readQr ? " or QR code" : ""}` : MESSAGES[status]}
       </p>
     </div>
   );
